@@ -11,7 +11,7 @@ function brtapsauce (options, callback) {
     throw new Error('must supply a saucelabs `user` option')
   if (typeof options.key != 'string')
     throw new Error('must supply a saucelabs `key` option')
-  if (typeof options.brsrc != 'string')
+  if (typeof options.brsrc != 'string' && !Array.isArray(options.brsrc))
     throw new Error('must supply a browserify `brsrc` file option')
   if (!Array.isArray(options.capabilities))
     throw new Error('must supply a `capabilities` array option')
@@ -40,7 +40,27 @@ function brtapsauce (options, callback) {
   })()
 
   function src (callback) {
-    callback(null, browserify().add(options.brsrc).bundle())
+    var files = typeof options.brsrc === 'string' ? [options.brsrc] : options.brsrc;
+    var source = browserify(files);
+    var _transforms;
+    if ((_transforms = options.brtransforms)) {
+      if (!Array.isArray(_transforms)) {
+        _transforms = [_transforms];
+      }
+      source = _transforms.reduce(function (_source, t) {
+        return _source.transform(t);
+      }, source);
+    };
+    var _plugins;
+    if ((_plugins = options.brplugins)) {
+      if (!Array.isArray(_plugins)) {
+        _plugins = [_plugins];
+      }
+      source = _plugins.reduce(function (_source, p) {
+        return _source.plugin(p);
+      }, source);
+    };
+    callback(null, source.bundle())
   }
 
   function run (cap, callback) {
